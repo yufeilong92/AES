@@ -1,5 +1,10 @@
 package com.example.administrator.myapplication;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.os.Environment;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -29,6 +34,10 @@ import javax.crypto.spec.SecretKeySpec;
  * @Copyright: 2018
  */
 public class CXAESUtil {
+    //AES加密使用的秘钥，注意的是秘钥的长度必须是16位
+    private static final String AES_KEY = "MyDifficultPassw";
+    //混入的字节
+    private static final String BYTE_KEY = "MyByte";
     private final static String HEX = "0123456789ABCDEF";
     private static final int keyLenght = 16;
     private static final String defaultV = "0";
@@ -36,10 +45,8 @@ public class CXAESUtil {
     /**
      * 加密
      *
-     * @param key
-     *            密钥
-     * @param src
-     *            加密文本
+     * @param key 密钥
+     * @param src 加密文本
      * @return
      * @throws Exception
      */
@@ -54,10 +61,8 @@ public class CXAESUtil {
     /**
      * 加密
      *
-     * @param key
-     *            密钥
-     * @param src
-     *            加密文本
+     * @param key 密钥
+     * @param src 加密文本
      * @return
      * @throws Exception
      */
@@ -72,10 +77,8 @@ public class CXAESUtil {
     /**
      * 解密
      *
-     * @param key
-     *            密钥
-     * @param encrypted
-     *            待揭秘文本
+     * @param key       密钥
+     * @param encrypted 待揭秘文本
      * @return
      * @throws Exception
      */
@@ -90,6 +93,7 @@ public class CXAESUtil {
 
     /**
      * 密钥key ,默认补的数字，补全16位数，以保证安全补全至少16位长度,android和ios对接通过
+     *
      * @param str
      * @param strLength
      * @param val
@@ -113,6 +117,7 @@ public class CXAESUtil {
      * 真正的加密过程
      * 1.通过密钥得到一个密钥专用的对象SecretKeySpec
      * 2.Cipher 加密算法，加密模式和填充方式三部分或指定加密算 (可以只用写算法然后用默认的其他方式)Cipher.getInstance("AES");
+     *
      * @param key
      * @param src
      * @return
@@ -169,6 +174,7 @@ public class CXAESUtil {
 
     /**
      * 把16进制转化为字节数组
+     *
      * @param hexString
      * @return
      */
@@ -184,6 +190,7 @@ public class CXAESUtil {
     /**
      * 二进制转字符,转成了16进制
      * 0123456789abcdefg
+     *
      * @param buf
      * @return
      */
@@ -203,6 +210,7 @@ public class CXAESUtil {
 
     /**
      * 初始化 AES Cipher
+     *
      * @param sKey
      * @param cipherMode
      * @return
@@ -242,9 +250,10 @@ public class CXAESUtil {
 
     /**
      * 对文件进行AES加密
-     * @param sourceFile
-     * @param fileType
-     * @param sKey
+     *
+     * @param sourceFile 资源的文件
+     * @param toFile     加密后的文件
+     * @param sKey       秘钥
      * @return
      */
     public static File encryptFile(File sourceFile, String toFile, String dir, String sKey) {
@@ -291,7 +300,11 @@ public class CXAESUtil {
 
     /**
      * AES方式解密文件
-     * @param sourceFile
+     *
+     * @param sourceFile 资源文件路径
+     * @param toFile
+     * @param dir
+     * @param sKey
      * @return
      */
     public static File decryptFile(File sourceFile, String toFile, String dir, String sKey) {
@@ -330,4 +343,62 @@ public class CXAESUtil {
         return decryptFile;
     }
 
+    /**
+     * @param filePath 图片文件路径
+     * @param bytePath 加密过后的图片文件路径
+     */
+    public void addDecryptImger(String filePath, String bytePath) {
+
+        // 混入字节加密后文件
+        try {
+            //获取图片的字节流
+            Bitmap bitmap = BitmapFactory.decodeFile(filePath);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+            byte[] bytes = baos.toByteArray();
+            FileOutputStream fops = new FileOutputStream(bytePath);
+            //混入的字节流
+            byte[] bytesAdd = BYTE_KEY.getBytes();
+            fops.write(bytesAdd);
+            fops.write(bytes);
+            fops.flush();
+            fops.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /***
+     * 解密
+     * @param bytePath 解密后的文件路径
+     * @return
+     */
+    public Bitmap jieDecryptImger(String bytePath) {
+        try {
+            FileInputStream stream = null;
+            stream = new FileInputStream(new File(bytePath));
+            ByteArrayOutputStream out = new ByteArrayOutputStream(1024);
+            byte[] b = new byte[1024];
+            int n;
+            int i = 0;
+            while ((n = stream.read(b)) != -1) {
+                if (i == 0) {
+                    //第一次写文件流的时候，移除我们之前混入的字节
+                    out.write(b, BYTE_KEY.length(), n - BYTE_KEY.length());
+                } else {
+                    out.write(b, 0, n);
+                }
+                i++;
+            }
+            stream.close();
+            out.close();
+            //获取字节流显示图片
+            byte[] bytes = out.toByteArray();
+            Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+            return bitmap;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }

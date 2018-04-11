@@ -73,7 +73,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     tvBefore.setText("加密后的内容:" + filecontent);
 
                     Log.i(TAG, "加密后的内容=" + filecontent);
-
+                    String s = CXAESUtil.encrypt2Java(key, inputString);
+                    Log.i(TAG, "加密后2java的内容: "+s);
                     String decryptString = CXAESUtil.decrypt(key, filecontent);//加密后的
 
                     Log.i(TAG, "解密后的内容=" + decryptString);
